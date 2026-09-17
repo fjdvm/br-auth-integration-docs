@@ -151,6 +151,43 @@
         letter-spacing: 0.08em;
         text-transform: uppercase;
       }
+      nav details {
+        margin: 0.35rem 0;
+      }
+      nav summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid transparent;
+        border-radius: 0.4rem;
+        color: #e9e1ff;
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        list-style: none;
+        text-transform: uppercase;
+      }
+      nav summary::-webkit-details-marker {
+        display: none;
+      }
+      nav summary::after {
+        content: "+";
+        color: var(--brand);
+        font-size: 1.15rem;
+        font-weight: 400;
+      }
+      nav details[open] summary {
+        border-color: var(--line);
+        background: rgb(63 35 123 / 0.31);
+      }
+      nav details[open] summary::after {
+        content: "−";
+      }
+      nav details a {
+        margin-left: 0.35rem;
+      }
       main {
         width: min(100%, 70rem);
         padding: 3rem clamp(1.25rem, 5vw, 4.5rem) 5rem;
@@ -372,60 +409,65 @@
           >Centralized Auth <span>Integration guide</span></a
         >
         <nav>
-          <p class="nav-title">Application teams</p>
-          <a href="#choose-your-path">Choose your path</a>
-          <a href="#for-application-integration-teams">App-team guide</a>
-          <a href="#what-you-will-build">Overview</a>
-          <a href="#before-you-start">Before you start</a>
-          <a href="#the-fixed-application-map">App and client map</a>
-          <p class="nav-title">Application implementation</p>
-          <a href="#1-give-the-auth-service-owner-the-deployed-url"
-            >1. Submit deployed URL</a
-          >
-          <a href="#2-add-environment-variables-to-the-client-app"
-            >2. Environment variables</a
-          >
-          <a href="#3-install-the-client-dependency">3. Install dependency</a>
-          <a href="#4-add-the-authjs-configuration">4. Auth.js configuration</a>
-          <a href="#5-add-the-authjs-route-and-typescript-types"
-            >5. Auth route and types</a
-          >
-          <a href="#6-protect-every-page-with-middleware">6. Middleware</a>
-          <a href="#7-send-signed-out-visitors-to-the-auth-service"
-            >7. Sign-in redirect</a
-          >
-          <a href="#8-block-users-who-do-not-have-this-applications-permission"
-            >8. System permission gate</a
-          >
-          <a href="#9-implement-complete-logout">9. Complete logout</a>
-          <a href="#10-receive-logout-events-from-other-applications"
-            >10. Cross-app logout</a
-          >
-          <a href="#11-trust-the-local-mkcert-certificate"
-            >11. Local certificate</a
-          >
-          <a href="#12-start-and-verify-locally">12. Verify locally</a>
-          <a href="#13-if-your-application-has-a-net-backend-api"
-            >13. .NET backend API</a
-          >
-          <p class="nav-title">App release</p>
-          <a href="#google-form-integration-request-template"
-            >Google Form template</a
-          >
-          <a href="#production-variables-at-a-glance">Production variables</a>
-          <a href="#production-handoff-checklist">Production checklist</a>
-          <a href="#common-problems">Troubleshooting</a>
-          <a href="#security-rules-worth-remembering">Security rules</a>
-          <p class="nav-title">Auth Service owner only</p>
-          <a href="#for-auth-service-owners">Owner runbook</a>
-          <a href="#1-review-the-integration-request">1. Review request</a>
-          <a href="#2-configure-the-auth-service-production-environment"
-            >2. Production environment</a
-          >
-          <a href="#3-register-callback-and-logout-urls"
-            >3. Register OIDC URLs</a
-          >
-          <a href="#4-deploy-and-confirm">4. Deploy and confirm</a>
+          <details open>
+            <summary>Application teams</summary>
+            <a href="#choose-your-path">Choose your path</a>
+            <a href="#for-application-integration-teams">App-team guide</a>
+            <a href="#what-you-will-build">Overview</a>
+            <a href="#before-you-start">Before you start</a>
+            <a href="#the-fixed-application-map">App and client map</a>
+            <p class="nav-title">Implementation</p>
+            <a href="#1-give-the-auth-service-owner-the-deployed-url"
+              >1. Submit deployed URL</a
+            >
+            <a href="#2-add-environment-variables-to-the-client-app"
+              >2. Environment variables</a
+            >
+            <a href="#3-install-the-client-dependency">3. Install dependency</a>
+            <a href="#4-add-the-authjs-configuration"
+              >4. Auth.js configuration</a
+            >
+            <a href="#5-add-the-authjs-route-and-typescript-types"
+              >5. Auth route and types</a
+            >
+            <a href="#6-protect-every-page-with-middleware">6. Middleware</a>
+            <a href="#7-send-signed-out-visitors-to-the-auth-service"
+              >7. Sign-in redirect</a
+            >
+            <a
+              href="#8-block-users-who-do-not-have-this-applications-permission"
+              >8. System permission gate</a
+            >
+            <a href="#9-implement-complete-logout">9. Complete logout</a>
+            <a href="#10-receive-logout-events-from-other-applications"
+              >10. Cross-app logout</a
+            >
+            <a href="#11-trust-the-local-mkcert-certificate"
+              >11. Local certificate</a
+            >
+            <a href="#12-start-and-verify-locally">12. Verify locally</a>
+            <a href="#13-if-your-application-has-a-net-backend-api"
+              >13. .NET backend API</a
+            >
+            <p class="nav-title">App release</p>
+            <a href="#google-form-integration-request-template">Google Form</a>
+            <a href="#production-variables-at-a-glance">Production variables</a>
+            <a href="#production-handoff-checklist">Production checklist</a>
+            <a href="#common-problems">Troubleshooting</a>
+            <a href="#security-rules-worth-remembering">Security rules</a>
+          </details>
+          <details>
+            <summary>Auth Service owner</summary>
+            <a href="#for-auth-service-owners">Owner runbook</a>
+            <a href="#1-review-the-integration-request">1. Review request</a>
+            <a href="#2-configure-the-auth-service-production-environment"
+              >2. Production environment</a
+            >
+            <a href="#3-register-callback-and-logout-urls"
+              >3. Register OIDC URLs</a
+            >
+            <a href="#4-deploy-and-confirm">4. Deploy and confirm</a>
+          </details>
         </nav>
       </aside>
       <main>
