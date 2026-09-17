@@ -996,6 +996,8 @@ Before asking for deployment approval, submit all of these to the Auth Service o
 - Use exact registered callback addresses, never broad wildcards.
 - Rotate a secret immediately if it is committed or exposed.
 
+{% unless page.audience == "application-team" %}
+
 ## For Auth Service owners
 
 This section is only for the team operating `internal-auth-service`. Application teams submit their URLs through the Google Form; they do not edit the Auth Service. Your job is to validate the request, register exact OIDC URLs, configure production variables, deploy, and confirm the result.
@@ -1091,3 +1093,5 @@ After deployment, check the following before replying to the requester:
 - The client secret was supplied through a secure channel, never in the Google Form or Git.
 
 Reply with the registered callback URL, registered post-logout URL, client ID, and confirmation that the deployment is ready for the application team's final test.
+
+{% endunless %}
