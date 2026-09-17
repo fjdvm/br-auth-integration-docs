@@ -207,6 +207,52 @@
         background: #a5f3fc;
         color: #082f49;
       }
+      .profile-card {
+        position: fixed;
+        top: auto;
+        right: 1.5rem;
+        bottom: 1.5rem;
+        z-index: 10;
+        width: 13rem;
+        height: auto;
+        overflow: visible;
+        padding: 1rem;
+        border: 1px solid var(--line);
+        border-radius: 0.65rem;
+        background: rgb(17 24 39 / 0.96);
+        box-shadow: 0 12px 28px rgb(0 0 0 / 0.3);
+      }
+      .profile-card p {
+        margin: 0;
+      }
+      .profile-card .profile-label {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .profile-card a {
+        display: inline-block;
+        margin-top: 0.4rem;
+        color: var(--brand);
+        font-weight: 800;
+        text-decoration: none;
+      }
+      .profile-card a:hover,
+      .profile-card a:focus {
+        text-decoration: underline;
+      }
+      footer {
+        margin-top: 4rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      footer p {
+        margin: 0;
+      }
       @media (max-width: 900px) {
         .shell {
           display: block;
@@ -232,6 +278,11 @@
         }
         .brand {
           margin: 0 0.5rem 0.75rem;
+        }
+        .profile-card {
+          position: static;
+          width: auto;
+          margin: 0 1rem 1rem;
         }
         main {
           padding-top: 2rem;
@@ -286,7 +337,29 @@
           <a href="#security-rules-worth-remembering">Security rules</a>
         </nav>
       </aside>
-      <main>{{ content }}</main>
+      <main>
+        {{ content }}
+        <footer>
+          <p>
+            Centralized Auth Integration Guide · Maintained by
+            <a
+              href="https://github.com/fjdvm"
+              target="_blank"
+              rel="noopener noreferrer"
+              >@fjdvm</a
+            >
+          </p>
+        </footer>
+      </main>
+      <aside class="profile-card" aria-label="Documentation maintainer">
+        <p class="profile-label">Documentation maintainer</p>
+        <a
+          href="https://github.com/fjdvm"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub · @fjdvm ↗</a
+        >
+      </aside>
     </div>
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
