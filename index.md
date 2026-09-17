@@ -742,6 +742,57 @@ Open `https://localhost:3001` and check each result:
 
 If the callback fails with an `invalid_redirect_uri` error, compare the entire callback address with the Auth Service registration. Check scheme (`https`), domain, port, path, and trailing slash on the post-logout root.
 
+## Google Form: integration request template
+
+Create the Google Form with **Collect email addresses** enabled and, when possible, restrict responses to your company account domain. Send responses to the Auth Service owner/team mailbox. The form must never request secrets, access tokens, passwords, or database connection strings.
+
+Use these questions and choices exactly. Mark every item marked **Required** as required in Google Forms.
+
+| Google Form question                       | Type            | Choices / instruction                                                                                                                            |
+| ------------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Request type **Required**                  | Multiple choice | `New application integration`; `Register a production URL`; `Change a callback or logout URL`; `Update an existing integration`; `Need help`     |
+| Application **Required**                   | Dropdown        | `Portal`; `HRMS`; `POS`; `SCMS`; `OOS`; `CRMS`; `Other (requires Auth Service owner approval)`                                                   |
+| Environment **Required**                   | Multiple choice | `Production`; `Staging`; `Development`; `Other`                                                                                                  |
+| Team / requester name **Required**         | Short answer    | Name of the person responsible for the application.                                                                                              |
+| Team contact email **Required**            | Short answer    | Use response validation: email address.                                                                                                          |
+| Client ID **Required**                     | Dropdown        | `portal-client`; `hrms-client`; `pos-client`; `scms-client`; `oos-client`; `crms-client`; `I need one assigned`                                  |
+| System code **Required**                   | Dropdown        | `Not applicable (Portal)`; `HRMS`; `POS`; `SCMS`; `OOS`; `CRMS`; `I need one assigned`                                                           |
+| Deployed application root URL **Required** | Short answer    | Example: `https://hrms.example.com/`. Must start with `https://` and end with `/`.                                                               |
+| OIDC callback URL **Required**             | Short answer    | Example: `https://hrms.example.com/api/auth/callback/authservice`. It must use the same domain as the root URL.                                  |
+| Post-logout return URL **Required**        | Short answer    | Usually the same as the deployed root URL: `https://hrms.example.com/`.                                                                          |
+| Planned deployment date                    | Date            | Optional, but useful for scheduling the Auth Service update.                                                                                     |
+| Additional notes                           | Paragraph       | Optional. Include expected user roles or rollout notes; do not include secrets.                                                                  |
+| Secure-secret confirmation **Required**    | Checkboxes      | One required option: `I understand that client secrets, AUTH_SECRET, tokens, passwords, and database credentials must not be sent in this form.` |
+
+### Auth Service owner's response checklist
+
+For every submitted request, the Auth Service owner should reply with one of these outcomes:
+
+- `Approved — URLs registered and environment values configured`
+- `Needs correction — callback or logout URL does not match the required format`
+- `Needs information — client ID, system code, or owner is missing`
+- `Declined — application/client has not been approved`
+
+After approval, the owner must confirm the exact registered callback URL, post-logout URL, deployment environment, and the secure channel used to provide the client secret. The requester then performs the production checks below.
+
+## Production variables at a glance
+
+**Yes — the required production variables are included in this guide.** Use this table as the final reminder before deployment. Values on the left belong to the deployed web application; values on the right belong to the deployed Auth Service.
+
+| Where to configure it | Variable                                                               | Required production value / reminder                                                                                             |
+| --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Web application       | `AUTH_SECRET`                                                          | A newly generated high-entropy secret for that application. Generate with `openssl rand -base64 32`; never reuse or commit it.   |
+| Web application       | `AUTH_URL`                                                             | The application's exact public root, such as `https://hrms.example.com`. It must agree with the registered post-logout root URL. |
+| Web application       | `AUTH_CLIENT_ID`                                                       | The assigned client ID, for example `hrms-client`.                                                                               |
+| Web application       | `AUTH_CLIENT_SECRET`                                                   | The secret supplied through an approved secure channel. Add it only to deployment secrets.                                       |
+| Web application       | `AUTH_ISSUER`                                                          | The public HTTPS URL of the Auth Service, ending in `/`, for example `https://auth.example.com/`.                                |
+| Web application       | `NODE_TLS_REJECT_UNAUTHORIZED`                                         | **Do not set this in production.** It is not needed with a valid public certificate.                                             |
+| Auth Service          | `PORTAL_URL`, `HRMS_URL`, `POS_URL`, `SCMS_URL`, `OOS_URL`, `CRMS_URL` | Set the matching deployed root URL, ending in `/`. This controls Portal links and permitted CORS origins.                        |
+| Auth Service          | Registered redirect URI                                                | Add the exact deployed callback: `https://your-app.example.com/api/auth/callback/authservice`.                                   |
+| Auth Service          | Registered post-logout URI                                             | Add the exact deployed root: `https://your-app.example.com/`.                                                                    |
+
+> **Important reminder:** Setting `HRMS_URL` (or another `*_URL`) alone is not enough. The Auth Service owner must also register both the callback and post-logout URL for that application's OpenIddict client before sign-in will work in production.
+
 ## Production handoff checklist
 
 Before asking for deployment approval, submit all of these to the Auth Service owner:
