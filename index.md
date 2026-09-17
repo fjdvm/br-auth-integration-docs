@@ -744,36 +744,11 @@ If the callback fails with an `invalid_redirect_uri` error, compare the entire c
 
 ## Google Form: integration request template
 
-Create the Google Form with **Collect email addresses** enabled and, when possible, restrict responses to your company account domain. Send responses to the Auth Service owner/team mailbox. The form must never request secrets, access tokens, passwords, or database connection strings.
+<p class="form-callout"><strong>Ready to submit?</strong> <a class="form-button" href="https://forms.gle/Z7VwH5k4ZPhTFQoC9" target="_blank" rel="noopener noreferrer">Submit an integration request in Google Forms ↗</a></p>
 
-Use these questions and choices exactly. Mark every item marked **Required** as required in Google Forms.
+Use the form to provide the deployed URLs and application details that the Auth Service owner needs. Never submit client secrets, `AUTH_SECRET`, passwords, tokens, or database credentials.
 
-| Google Form question                       | Type            | Choices / instruction                                                                                                                            |
-| ------------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Request type **Required**                  | Multiple choice | `New application integration`; `Register a production URL`; `Change a callback or logout URL`; `Update an existing integration`; `Need help`     |
-| Application **Required**                   | Dropdown        | `Portal`; `HRMS`; `POS`; `SCMS`; `OOS`; `CRMS`; `Other (requires Auth Service owner approval)`                                                   |
-| Environment **Required**                   | Multiple choice | `Production`; `Staging`; `Development`; `Other`                                                                                                  |
-| Team / requester name **Required**         | Short answer    | Name of the person responsible for the application.                                                                                              |
-| Team contact email **Required**            | Short answer    | Use response validation: email address.                                                                                                          |
-| Client ID **Required**                     | Dropdown        | `portal-client`; `hrms-client`; `pos-client`; `scms-client`; `oos-client`; `crms-client`; `I need one assigned`                                  |
-| System code **Required**                   | Dropdown        | `Not applicable (Portal)`; `HRMS`; `POS`; `SCMS`; `OOS`; `CRMS`; `I need one assigned`                                                           |
-| Deployed application root URL **Required** | Short answer    | Example: `https://hrms.example.com/`. Must start with `https://` and end with `/`.                                                               |
-| OIDC callback URL **Required**             | Short answer    | Example: `https://hrms.example.com/api/auth/callback/authservice`. It must use the same domain as the root URL.                                  |
-| Post-logout return URL **Required**        | Short answer    | Usually the same as the deployed root URL: `https://hrms.example.com/`.                                                                          |
-| Planned deployment date                    | Date            | Optional, but useful for scheduling the Auth Service update.                                                                                     |
-| Additional notes                           | Paragraph       | Optional. Include expected user roles or rollout notes; do not include secrets.                                                                  |
-| Secure-secret confirmation **Required**    | Checkboxes      | One required option: `I understand that client secrets, AUTH_SECRET, tokens, passwords, and database credentials must not be sent in this form.` |
-
-### Auth Service owner's response checklist
-
-For every submitted request, the Auth Service owner should reply with one of these outcomes:
-
-- `Approved — URLs registered and environment values configured`
-- `Needs correction — callback or logout URL does not match the required format`
-- `Needs information — client ID, system code, or owner is missing`
-- `Declined — application/client has not been approved`
-
-After approval, the owner must confirm the exact registered callback URL, post-logout URL, deployment environment, and the secure channel used to provide the client secret. The requester then performs the production checks below.
+The Auth Service owner reviews the submitted URLs, registers the exact callback and post-logout addresses, and then confirms the client configuration with the requester.
 
 ## Production variables at a glance
 
