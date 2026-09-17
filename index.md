@@ -9,7 +9,16 @@ This is the copy-and-paste guide for connecting **Portal, HRMS, POS, SCMS, and O
 
 The guide uses the working implementations in `internal-auth-service/apps/web/portal` and `trellis`. Follow the steps in order. Do not put passwords, client secrets, or `.env.local` files in Git.
 
-> **HRMS is only the worked example.** Every file path below uses `apps/web/hrms` to keep the guide easy to follow. When integrating POS, SCMS, or OOS, replace `hrms`, `HRMS`, `hrms-client`, and port `3001` with that application's values from the map below. Do not copy HRMS values into another application.
+Each application has its own tutorial below. Use only the section that matches the application you are integrating; do not copy another application's client ID, system code, port, or secret.
+
+## Choose your path
+
+- **Application integration team:** Start at [For application integration teams](#for-application-integration-teams). This is the copy-and-paste implementation path for Portal, HRMS, POS, SCMS, or OOS.
+- **Auth Service owner:** Skip to [For Auth Service owners](#for-auth-service-owners). This is the server-side registration, production environment, and request-review runbook.
+
+## For application integration teams
+
+This section is for the team building or deploying an application. It tells you what to add to **your own Next.js app** and what URLs to submit. It does not ask you to edit the Auth Service.
 
 ## What you will build
 
@@ -65,6 +74,56 @@ Use this table exactly. `System code` is case-sensitive.
 
 The Auth Service has a separate `crms-client` for CRMS. Its setup follows the same pattern with system code `CRMS`.
 
+## Application tutorials
+
+Choose one tutorial, then follow the shared implementation steps that follow it. The shared code is identical; your app tutorial gives the exact values and one exception you must use.
+
+### Portal tutorial
+
+**Directory:** `apps/web/portal/`<br>
+**Local URL:** `https://localhost:3000`<br>
+**Client ID:** `portal-client`
+
+Set `AUTH_URL=https://portal.example.com` and `AUTH_CLIENT_ID=portal-client` in Portal's production environment. Portal is the launcher, so it authenticates users but does **not** use a `THIS_SYSTEM_CODE` access gate in `app/layout.tsx`. Follow shared steps 1–7 and 9–12; keep its own Portal UI in the signed-in layout branch.
+
+### HRMS tutorial
+
+**Directory:** `apps/web/hrms/`<br>
+**Local URL:** `https://localhost:3001`<br>
+**Client ID:** `hrms-client`<br>
+**Required system code:** `HRMS`
+
+Set `AUTH_URL=https://hrms.example.com`, `AUTH_CLIENT_ID=hrms-client`, and `THIS_SYSTEM_CODE="HRMS"`. The shared file paths below already use HRMS, so copy them without changing the directory or port.
+
+### POS tutorial
+
+**Directory:** `apps/web/pos/`<br>
+**Local URL:** `https://localhost:3002`<br>
+**Client ID:** `pos-client`<br>
+**Required system code:** `POS`
+
+Follow every shared step, but replace `apps/web/hrms` with `apps/web/pos`, `3001` with `3002`, `hrms-client` with `pos-client`, and `THIS_SYSTEM_CODE="HRMS"` with `THIS_SYSTEM_CODE="POS"`. Set production `AUTH_URL=https://pos.example.com`.
+
+### SCMS tutorial
+
+**Directory:** `apps/web/scms/`<br>
+**Local URL:** `https://localhost:3003`<br>
+**Client ID:** `scms-client`<br>
+**Required system code:** `SCMS`
+
+Follow every shared step, but replace `apps/web/hrms` with `apps/web/scms`, `3001` with `3003`, `hrms-client` with `scms-client`, and `THIS_SYSTEM_CODE="HRMS"` with `THIS_SYSTEM_CODE="SCMS"`. Set production `AUTH_URL=https://scms.example.com`.
+
+### OOS tutorial
+
+**Directory:** `apps/web/oos/`<br>
+**Local URL:** `https://localhost:3004`<br>
+**Client ID:** `oos-client`<br>
+**Required system code:** `OOS`
+
+Follow every shared step, but replace `apps/web/hrms` with `apps/web/oos`, `3001` with `3004`, `hrms-client` with `oos-client`, and `THIS_SYSTEM_CODE="HRMS"` with `THIS_SYSTEM_CODE="OOS"`. Set production `AUTH_URL=https://oos.example.com`.
+
+## Shared implementation steps
+
 ## 1. Give the Auth Service owner the deployed URL
 
 **Do this before deploying your web application.** Send this completed information to the Auth Service owner. A home-page URL alone is not enough: OIDC accepts only callback and logout addresses registered by the server.
@@ -78,48 +137,7 @@ OIDC callback URL: https://hrms.example.com/api/auth/callback/authservice
 Post-logout return URL: https://hrms.example.com/
 ```
 
-Also provide the root URL for the environment variable that matches your application:
-
-```dotenv
-HRMS_URL=https://hrms.example.com/
-POS_URL=https://pos.example.com/
-SCMS_URL=https://scms.example.com/
-OOS_URL=https://oos.example.com/
-PORTAL_URL=https://portal.example.com/
-```
-
-The Auth Service owner must set these values in the **Auth Service deployment environment** (not in a web app), at:
-
-```text
-internal-auth-service/apps/api/internal-auth-service/.env
-```
-
-For hosted deployments, add the same variables in the hosting provider's environment-variable screen. Never submit an `.env` file to Git.
-
-### What the Auth Service owner must register
-
-In `internal-auth-service/apps/api/internal-auth-service/Seeders/DbSeeder.cs`, the matching client must contain both the local and public URLs. Example for HRMS:
-
-```csharp
-(
-    "hrms-client",
-    "READ_THE_SECRET_FROM_A_SECURE_DEPLOYMENT_SECRET",
-    new[]
-    {
-        "https://localhost:3001/api/auth/callback/authservice",
-        "https://hrms.example.com/api/auth/callback/authservice"
-    },
-    new[]
-    {
-        "https://localhost:3001/",
-        "https://hrms.example.com/"
-    }
-),
-```
-
-Repeat this exact change for `pos-client`, `scms-client`, or `oos-client` using its own public URL. On startup the seeder adds missing URLs to an already registered client. It does not remove old URLs. The public root values (`HRMS_URL`, `POS_URL`, and so on) also allow CORS requests and make the Portal system cards point to the deployed app.
-
-> Do not use a wildcard such as `https://*.example.com`. The callback and post-logout URLs must be exact addresses.
+Submit these three URLs through the [integration request form](https://forms.gle/Z7VwH5k4ZPhTFQoC9). The Auth Service owner must register them before production login will work. Do not try to change the Auth Service configuration yourself.
 
 ## 2. Add environment variables to the client app
 
@@ -752,7 +770,7 @@ The Auth Service owner reviews the submitted URLs, registers the exact callback 
 
 ## Production variables at a glance
 
-**Yes — the required production variables are included in this guide.** Use this table as the final reminder before deployment. Values on the left belong to the deployed web application; values on the right belong to the deployed Auth Service.
+Use this table as the final reminder before deploying the web application. These values belong to your application, not to the Auth Service.
 
 ### Copy this into the web application's production environment
 
@@ -784,31 +802,6 @@ NEXT_PUBLIC_AUTH_SECRET=
 NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
 
-### Auth Service production environment
-
-The Auth Service owner configures these in `apps/api/internal-auth-service/.env` for a self-hosted server, or in the Auth Service hosting provider's environment-variable screen. These values do **not** go in HRMS, POS, SCMS, OOS, or Portal.
-
-```dotenv
-# Secret infrastructure values: obtain from the approved database and email providers.
-DATABASE_URL=postgresql-connection-string-from-the-approved-secret-store
-SMTP_HOST=your-smtp-host
-SMTP_PORT=587
-SMTP_USERNAME=your-smtp-username
-SMTP_PASSWORD=your-smtp-password
-SMTP_FROM=noreply@yourdomain.com
-
-# Public web application roots. Every value must be the deployed HTTPS URL and end in /.
-PORTAL_URL=https://portal.example.com/
-HRMS_URL=https://hrms.example.com/
-POS_URL=https://pos.example.com/
-SCMS_URL=https://scms.example.com/
-OOS_URL=https://oos.example.com/
-CRMS_URL=https://crms.example.com/
-
-# Public login page served by the Auth Service itself.
-LOGIN_URL=https://auth.example.com/Account/Login
-```
-
 ### Replace only these values for each application
 
 | Integrating | `AUTH_URL`                   | `AUTH_CLIENT_ID` | System code in `app/layout.tsx` |
@@ -821,26 +814,21 @@ LOGIN_URL=https://auth.example.com/Account/Login
 
 Each application needs its **own** `AUTH_SECRET`. Do not copy the HRMS secret to POS, SCMS, OOS, or Portal. `AUTH_CLIENT_SECRET` is also different per client and must be received from the Auth Service owner through a secure channel.
 
-| Where to configure it | Variable                                                               | Required production value / reminder                                                                                             |
-| --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Web application       | `AUTH_SECRET`                                                          | A newly generated high-entropy secret for that application. Generate with `openssl rand -base64 32`; never reuse or commit it.   |
-| Web application       | `AUTH_URL`                                                             | The application's exact public root, such as `https://hrms.example.com`. It must agree with the registered post-logout root URL. |
-| Web application       | `AUTH_CLIENT_ID`                                                       | The assigned client ID, for example `hrms-client`.                                                                               |
-| Web application       | `AUTH_CLIENT_SECRET`                                                   | The secret supplied through an approved secure channel. Add it only to deployment secrets.                                       |
-| Web application       | `AUTH_ISSUER`                                                          | The public HTTPS URL of the Auth Service, ending in `/`, for example `https://auth.example.com/`.                                |
-| Web application       | `NODE_TLS_REJECT_UNAUTHORIZED`                                         | **Do not set this in production.** It is not needed with a valid public certificate.                                             |
-| Auth Service          | `PORTAL_URL`, `HRMS_URL`, `POS_URL`, `SCMS_URL`, `OOS_URL`, `CRMS_URL` | Set the matching deployed root URL, ending in `/`. This controls Portal links and permitted CORS origins.                        |
-| Auth Service          | Registered redirect URI                                                | Add the exact deployed callback: `https://your-app.example.com/api/auth/callback/authservice`.                                   |
-| Auth Service          | Registered post-logout URI                                             | Add the exact deployed root: `https://your-app.example.com/`.                                                                    |
-
-> **Important reminder:** Setting `HRMS_URL` (or another `*_URL`) alone is not enough. The Auth Service owner must also register both the callback and post-logout URL for that application's OpenIddict client before sign-in will work in production.
+| Where to configure it | Variable                       | Required production value / reminder                                                                                             |
+| --------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| Web application       | `AUTH_SECRET`                  | A newly generated high-entropy secret for that application. Generate with `openssl rand -base64 32`; never reuse or commit it.   |
+| Web application       | `AUTH_URL`                     | The application's exact public root, such as `https://hrms.example.com`. It must agree with the registered post-logout root URL. |
+| Web application       | `AUTH_CLIENT_ID`               | The assigned client ID, for example `hrms-client`.                                                                               |
+| Web application       | `AUTH_CLIENT_SECRET`           | The secret supplied through an approved secure channel. Add it only to deployment secrets.                                       |
+| Web application       | `AUTH_ISSUER`                  | The public HTTPS URL of the Auth Service, ending in `/`, for example `https://auth.example.com/`.                                |
+| Web application       | `NODE_TLS_REJECT_UNAUTHORIZED` | **Do not set this in production.** It is not needed with a valid public certificate.                                             |
 
 ## Production handoff checklist
 
 Before asking for deployment approval, submit all of these to the Auth Service owner:
 
 - [ ] Application name, client ID, and system code.
-- [ ] Final public root URL for `HRMS_URL`, `POS_URL`, `SCMS_URL`, `OOS_URL`, or `PORTAL_URL`.
+- [ ] Final public root URL for the application you are deploying.
 - [ ] Exact callback URL ending in `/api/auth/callback/authservice`.
 - [ ] Exact post-logout root URL ending in `/`.
 - [ ] Confirmation that the app's `AUTH_URL` matches the public root.
@@ -867,3 +855,99 @@ Before asking for deployment approval, submit all of these to the Auth Service o
 - Check system access on the server in `app/layout.tsx`; hiding buttons is not authorization.
 - Use exact registered callback addresses, never broad wildcards.
 - Rotate a secret immediately if it is committed or exposed.
+
+## For Auth Service owners
+
+This section is only for the team operating `internal-auth-service`. Application teams submit their URLs through the Google Form; they do not edit the Auth Service. Your job is to validate the request, register exact OIDC URLs, configure production variables, deploy, and confirm the result.
+
+### 1. Review the integration request
+
+Before changing anything, confirm all of these details from the request:
+
+- The application, client ID, and system code agree with the fixed application map.
+- The root URL uses public `https://` and ends in `/`.
+- The callback URL is exactly `https://your-app.example.com/api/auth/callback/authservice`.
+- The post-logout URL is the exact root URL, including the final `/`.
+- The requested client has been approved and its secret will be shared only through an approved secure channel.
+
+Reject or return the request for correction if any URL is incomplete, uses a wildcard, uses `http://` in production, or belongs to an unapproved domain.
+
+### 2. Configure the Auth Service production environment
+
+Set these values in `apps/api/internal-auth-service/.env` on a self-hosted server, or in the Auth Service hosting provider's environment-variable screen. Do not place these values in HRMS, POS, SCMS, OOS, or Portal.
+
+```dotenv
+# Secret infrastructure values: obtain from the approved database and email providers.
+DATABASE_URL=postgresql-connection-string-from-the-approved-secret-store
+SMTP_HOST=your-smtp-host
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-username
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM=noreply@yourdomain.com
+
+# Public web application roots. Every value must be the deployed HTTPS URL and end in /.
+PORTAL_URL=https://portal.example.com/
+HRMS_URL=https://hrms.example.com/
+POS_URL=https://pos.example.com/
+SCMS_URL=https://scms.example.com/
+OOS_URL=https://oos.example.com/
+CRMS_URL=https://crms.example.com/
+
+# Public login page served by the Auth Service itself.
+LOGIN_URL=https://auth.example.com/Account/Login
+```
+
+`PORTAL_URL`, `HRMS_URL`, `POS_URL`, `SCMS_URL`, `OOS_URL`, and `CRMS_URL` update the Portal system links and the CORS allowlist. They are required, but they do **not** register OIDC callbacks by themselves.
+
+### 3. Register callback and logout URLs
+
+In this file:
+
+```text
+apps/api/internal-auth-service/Seeders/DbSeeder.cs
+```
+
+add the approved public callback and post-logout URL to the correct client. Keep its local URL too. Example for HRMS:
+
+```csharp
+(
+    "hrms-client",
+    "READ_THE_SECRET_FROM_A_SECURE_DEPLOYMENT_SECRET",
+    new[]
+    {
+        "https://localhost:3001/api/auth/callback/authservice",
+        "https://hrms.example.com/api/auth/callback/authservice"
+    },
+    new[]
+    {
+        "https://localhost:3001/",
+        "https://hrms.example.com/"
+    }
+),
+```
+
+Use the matching client and port for the other applications:
+
+| Application | Client ID       | Local port | System code |
+| ----------- | --------------- | ---------- | ----------- |
+| Portal      | `portal-client` | `3000`     | None        |
+| HRMS        | `hrms-client`   | `3001`     | `HRMS`      |
+| POS         | `pos-client`    | `3002`     | `POS`       |
+| SCMS        | `scms-client`   | `3003`     | `SCMS`      |
+| OOS         | `oos-client`    | `3004`     | `OOS`       |
+| CRMS        | `crms-client`   | `3005`     | `CRMS`      |
+
+The existing seeder adds missing callback and post-logout URLs on startup. It does not remove prior URLs. Never use wildcard redirect URLs.
+
+### 4. Deploy and confirm
+
+After deployment, check the following before replying to the requester:
+
+- The Auth Service starts successfully with its PostgreSQL and SMTP configuration.
+- The deployed root URL appears in the Portal system catalog.
+- The application can complete login using the approved callback URL.
+- The user returns to the approved root after `/connect/logout`.
+- The correct system code is present in the user's access claim.
+- The client secret was supplied through a secure channel, never in the Google Form or Git.
+
+Reply with the registered callback URL, registered post-logout URL, client ID, and confirmation that the deployment is ready for the application team's final test.
