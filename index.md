@@ -9,7 +9,7 @@ This is the copy-and-paste guide for connecting **Portal, HRMS, POS, SCMS, and O
 
 The guide uses the working implementations in `internal-auth-service/apps/web/portal` and `trellis`. Follow the steps in order. Do not put passwords, client secrets, or `.env.local` files in Git.
 
-Each application has its own tutorial below. Use only the section that matches the application you are integrating; do not copy another application's client ID, system code, port, or secret.
+Use the fixed application map below to select the correct client ID, system code, port, and directory for your app. Do not copy another application's values.
 
 ## Choose your path
 
@@ -74,55 +74,7 @@ Use this table exactly. `System code` is case-sensitive.
 
 The Auth Service has a separate `crms-client` for CRMS. Its setup follows the same pattern with system code `CRMS`.
 
-## Application tutorials
-
-Choose one tutorial, then follow the shared implementation steps that follow it. The shared code is identical; your app tutorial gives the exact values and one exception you must use.
-
-### Portal tutorial
-
-**Directory:** `apps/web/portal/`<br>
-**Local URL:** `https://localhost:3000`<br>
-**Client ID:** `portal-client`
-
-Set `AUTH_URL=https://portal.example.com` and `AUTH_CLIENT_ID=portal-client` in Portal's production environment. Portal is the launcher, so it authenticates users but does **not** use a `THIS_SYSTEM_CODE` access gate in `app/layout.tsx`. Follow shared steps 1–7 and 9–12; keep its own Portal UI in the signed-in layout branch.
-
-### HRMS tutorial
-
-**Directory:** `apps/web/hrms/`<br>
-**Local URL:** `https://localhost:3001`<br>
-**Client ID:** `hrms-client`<br>
-**Required system code:** `HRMS`
-
-Set `AUTH_URL=https://hrms.example.com`, `AUTH_CLIENT_ID=hrms-client`, and `THIS_SYSTEM_CODE="HRMS"`. The shared file paths below already use HRMS, so copy them without changing the directory or port.
-
-### POS tutorial
-
-**Directory:** `apps/web/pos/`<br>
-**Local URL:** `https://localhost:3002`<br>
-**Client ID:** `pos-client`<br>
-**Required system code:** `POS`
-
-Follow every shared step, but replace `apps/web/hrms` with `apps/web/pos`, `3001` with `3002`, `hrms-client` with `pos-client`, and `THIS_SYSTEM_CODE="HRMS"` with `THIS_SYSTEM_CODE="POS"`. Set production `AUTH_URL=https://pos.example.com`.
-
-### SCMS tutorial
-
-**Directory:** `apps/web/scms/`<br>
-**Local URL:** `https://localhost:3003`<br>
-**Client ID:** `scms-client`<br>
-**Required system code:** `SCMS`
-
-Follow every shared step, but replace `apps/web/hrms` with `apps/web/scms`, `3001` with `3003`, `hrms-client` with `scms-client`, and `THIS_SYSTEM_CODE="HRMS"` with `THIS_SYSTEM_CODE="SCMS"`. Set production `AUTH_URL=https://scms.example.com`.
-
-### OOS tutorial
-
-**Directory:** `apps/web/oos/`<br>
-**Local URL:** `https://localhost:3004`<br>
-**Client ID:** `oos-client`<br>
-**Required system code:** `OOS`
-
-Follow every shared step, but replace `apps/web/hrms` with `apps/web/oos`, `3001` with `3004`, `hrms-client` with `oos-client`, and `THIS_SYSTEM_CODE="HRMS"` with `THIS_SYSTEM_CODE="OOS"`. Set production `AUTH_URL=https://oos.example.com`.
-
-## Shared implementation steps
+## Application implementation steps
 
 ## 1. Give the Auth Service owner the deployed URL
 
@@ -838,14 +790,13 @@ Before asking for deployment approval, submit all of these to the Auth Service o
 
 ## Common problems
 
-| Symptom                                            | Usually means                                                   | Fix                                                                                                        |
-| -------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `invalid_redirect_uri`                             | Callback is not registered exactly                              | Submit the complete deployed callback URL and have the Auth Service owner add it to the matching client.   |
-| Browser says certificate is unsafe locally         | mkcert is not installed/trusted                                 | Run `mkcert -install`, regenerate `localhost` certificates, restart the apps.                              |
-| Login works but Access denied appears              | The user lacks the app system code                              | In Portal administration, grant the user access to `HRMS`, `POS`, `SCMS`, or `OOS`; sign out and in again. |
-| Login repeats forever                              | Wrong `AUTH_URL`, missing auth route, or cookies cannot persist | Check `.env.local`, `app/api/auth/[...nextauth]/route.ts`, and HTTPS.                                      |
-| User remains signed in after logout                | The button used `signOut()` only                                | Navigate to `/api/logout` so central logout and explicit cookie clearing both happen.                      |
-| Production app loads but Portal links to localhost | The Auth Service deployment lacks the matching `*_URL`          | Submit the deployed root URL and set it in the Auth Service environment.                                   |
+| Symptom                                    | Usually means                                                   | Fix                                                                                                        |
+| ------------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `invalid_redirect_uri`                     | Callback is not registered exactly                              | Submit the complete deployed callback URL and have the Auth Service owner add it to the matching client.   |
+| Browser says certificate is unsafe locally | mkcert is not installed/trusted                                 | Run `mkcert -install`, regenerate `localhost` certificates, restart the apps.                              |
+| Login works but Access denied appears      | The user lacks the app system code                              | In Portal administration, grant the user access to `HRMS`, `POS`, `SCMS`, or `OOS`; sign out and in again. |
+| Login repeats forever                      | Wrong `AUTH_URL`, missing auth route, or cookies cannot persist | Check `.env.local`, `app/api/auth/[...nextauth]/route.ts`, and HTTPS.                                      |
+| User remains signed in after logout        | The button used `signOut()` only                                | Navigate to `/api/logout` so central logout and explicit cookie clearing both happen.                      |
 
 ## Security rules worth remembering
 
