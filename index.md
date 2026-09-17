@@ -1,6 +1,8 @@
 ---
 title: Centralized Auth Integration Guide
 layout: default
+permalink: /application-teams/
+audience: application-team
 ---
 
 # Centralized Auth Integration Guide
@@ -10,11 +12,6 @@ This is the copy-and-paste guide for connecting **Portal, HRMS, POS, SCMS, and O
 The guide uses the working implementations in `internal-auth-service/apps/web/portal` and `trellis`. Follow the steps in order. Do not put passwords, client secrets, or `.env.local` files in Git.
 
 Use the fixed application map below to select the correct client ID, system code, port, and directory for your app. Do not copy another application's values.
-
-## Choose your path
-
-- **Application integration team:** Start at [For application integration teams](#for-application-integration-teams). This is the copy-and-paste implementation path for Portal, HRMS, POS, SCMS, or OOS.
-- **Auth Service owner:** Skip to [For Auth Service owners](#for-auth-service-owners). This is the server-side registration, production environment, and request-review runbook.
 
 ## For application integration teams
 

@@ -365,6 +365,10 @@
       footer p {
         margin: 0;
       }
+      body.application-team .page-content #for-auth-service-owners,
+      body.application-team .page-content #for-auth-service-owners ~ * {
+        display: none;
+      }
       @media (max-width: 900px) {
         .shell {
           display: block;
@@ -402,16 +406,23 @@
       }
     </style>
   </head>
-  <body>
+  <body class="{{ page.audience | default: 'overview' }}">
     <div class="shell">
       <aside aria-label="Documentation navigation">
         <a class="brand" href="{{ '/' | relative_url }}"
           >Centralized Auth <span>Integration guide</span></a
         >
         <nav>
+          <a href="{{ '/' | relative_url }}">Documentation overview</a>
+          <a href="{{ '/application-teams/' | relative_url }}"
+            >Application-team guide</a
+          >
+          <a href="{{ '/auth-service-owner/' | relative_url }}"
+            >Auth Service owner runbook</a
+          >
+          {% if page.audience == "application-team" %}
           <details open>
             <summary>Application teams</summary>
-            <a href="#choose-your-path">Choose your path</a>
             <a href="#for-application-integration-teams">App-team guide</a>
             <a href="#what-you-will-build">Overview</a>
             <a href="#before-you-start">Before you start</a>
@@ -456,6 +467,7 @@
             <a href="#common-problems">Troubleshooting</a>
             <a href="#security-rules-worth-remembering">Security rules</a>
           </details>
+          {% elsif page.audience == "auth-service-owner" %}
           <details>
             <summary>Auth Service owner</summary>
             <a href="#for-auth-service-owners">Owner runbook</a>
@@ -468,10 +480,11 @@
             >
             <a href="#4-deploy-and-confirm">4. Deploy and confirm</a>
           </details>
+          {% endif %}
         </nav>
       </aside>
       <main>
-        {{ content }}
+        <div class="page-content">{{ content }}</div>
         <footer>
           <p>
             Centralized Auth Integration Guide · Maintained by
