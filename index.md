@@ -779,6 +779,73 @@ After approval, the owner must confirm the exact registered callback URL, post-l
 
 **Yes — the required production variables are included in this guide.** Use this table as the final reminder before deployment. Values on the left belong to the deployed web application; values on the right belong to the deployed Auth Service.
 
+### Copy this into the web application's production environment
+
+For a hosted application, enter these values in the hosting provider's **environment variables / secrets** screen. Do not create or upload a real `.env` file to the repository. If the hosting provider requires a file, use this exact content as `apps/web/hrms/.env.local` locally only, and keep it gitignored.
+
+```dotenv
+# HRMS production example — change every HRMS value for POS, SCMS, OOS, or Portal.
+# Generate a different value for every application:
+# openssl rand -base64 32
+AUTH_SECRET=put-a-new-random-secret-here
+
+# The public root URL of THIS application. No trailing slash is required here.
+AUTH_URL=https://hrms.example.com
+
+# The OIDC client assigned by the Auth Service owner.
+AUTH_CLIENT_ID=hrms-client
+AUTH_CLIENT_SECRET=put-the-secret-received-through-the-approved-secure-channel-here
+
+# The public HTTPS root URL of the Auth Service. Keep the final slash.
+AUTH_ISSUER=https://auth.example.com/
+```
+
+Do **not** put any of these in the client/browser-visible environment:
+
+```dotenv
+# Never create these values in production:
+NEXT_PUBLIC_AUTH_CLIENT_SECRET=
+NEXT_PUBLIC_AUTH_SECRET=
+NODE_TLS_REJECT_UNAUTHORIZED=0
+```
+
+### Auth Service production environment
+
+The Auth Service owner configures these in `apps/api/internal-auth-service/.env` for a self-hosted server, or in the Auth Service hosting provider's environment-variable screen. These values do **not** go in HRMS, POS, SCMS, OOS, or Portal.
+
+```dotenv
+# Secret infrastructure values: obtain from the approved database and email providers.
+DATABASE_URL=postgresql-connection-string-from-the-approved-secret-store
+SMTP_HOST=your-smtp-host
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-username
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM=noreply@yourdomain.com
+
+# Public web application roots. Every value must be the deployed HTTPS URL and end in /.
+PORTAL_URL=https://portal.example.com/
+HRMS_URL=https://hrms.example.com/
+POS_URL=https://pos.example.com/
+SCMS_URL=https://scms.example.com/
+OOS_URL=https://oos.example.com/
+CRMS_URL=https://crms.example.com/
+
+# Public login page served by the Auth Service itself.
+LOGIN_URL=https://auth.example.com/Account/Login
+```
+
+### Replace only these values for each application
+
+| Integrating | `AUTH_URL`                   | `AUTH_CLIENT_ID` | System code in `app/layout.tsx` |
+| ----------- | ---------------------------- | ---------------- | ------------------------------- |
+| HRMS        | `https://hrms.example.com`   | `hrms-client`    | `HRMS`                          |
+| POS         | `https://pos.example.com`    | `pos-client`     | `POS`                           |
+| SCMS        | `https://scms.example.com`   | `scms-client`    | `SCMS`                          |
+| OOS         | `https://oos.example.com`    | `oos-client`     | `OOS`                           |
+| Portal      | `https://portal.example.com` | `portal-client`  | No system-code gate             |
+
+Each application needs its **own** `AUTH_SECRET`. Do not copy the HRMS secret to POS, SCMS, OOS, or Portal. `AUTH_CLIENT_SECRET` is also different per client and must be received from the Auth Service owner through a secure channel.
+
 | Where to configure it | Variable                                                               | Required production value / reminder                                                                                             |
 | --------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | Web application       | `AUTH_SECRET`                                                          | A newly generated high-entropy secret for that application. Generate with `openssl rand -base64 32`; never reuse or commit it.   |
