@@ -1,5 +1,6 @@
 ---
 title: Centralized Auth Integration Guide
+layout: default
 ---
 
 # Centralized Auth Integration Guide
@@ -8,15 +9,19 @@ This is the copy-and-paste guide for connecting **Portal, HRMS, POS, SCMS, and O
 
 The guide uses the working implementations in `internal-auth-service/apps/web/portal` and `trellis`. Follow the steps in order. Do not put passwords, client secrets, or `.env.local` files in Git.
 
+> **HRMS is only the worked example.** Every file path below uses `apps/web/hrms` to keep the guide easy to follow. When integrating POS, SCMS, or OOS, replace `hrms`, `HRMS`, `hrms-client`, and port `3001` with that application's values from the map below. Do not copy HRMS values into another application.
+
 ## What you will build
 
-```text
-Browser → HRMS / POS / SCMS / OOS / Portal
-              ↓
-       Centralized Auth Service
-              ↓
-      PostgreSQL users and permissions
-```
+<div class="mermaid">
+flowchart TD
+  User[Employee in a browser] --> App[Portal, HRMS, POS, SCMS, or OOS]
+  App -->|OIDC authorization code + PKCE| Auth[Centralized Auth Service]
+  Auth -->|Checks identity and permissions| Database[(PostgreSQL)]
+  Auth -->|ID token, access token, refresh token| App
+  App -->|Allows only its system code| User
+  Auth -. logout event .-> App
+</div>
 
 After this setup:
 
@@ -141,9 +146,9 @@ AUTH_CLIENT_SECRET=replace-with-the-secret-provided-securely-by-the-auth-service
 # Include the ending slash.
 AUTH_ISSUER=https://localhost:5001/
 
-# Development only. Do not set this to 0 in hosted environments.
-NODE_TLS_REJECT_UNAUTHORIZED=0
 ```
+
+Do **not** add `NODE_TLS_REJECT_UNAUTHORIZED=0`. Step 11 configures Node.js to trust only the local mkcert certificate authority during development. That is safer and prevents an insecure TLS setting from reaching production.
 
 Create a safe committed template beside it:
 
@@ -188,12 +193,16 @@ Create this file:
 apps/web/hrms/auth.ts
 ```
 
-Copy this complete file. For POS, SCMS, and OOS, replace only `HRMS` in `THIS_SYSTEM_CODE` later in the layout; this authentication file is the same for all four applications.
+Copy this complete file. The file itself is shared by all client apps; their `.env.local` values supply the correct client ID, secret, issuer, and app URL. In Step 8, set the matching `THIS_SYSTEM_CODE` (`HRMS`, `POS`, `SCMS`, or `OOS`).
 
 ```ts
 import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import { refreshAccessToken } from "@/lib/auth/token-refresh";
+
+const issuer = requiredEnvironment("AUTH_ISSUER");
+const clientId = requiredEnvironment("AUTH_CLIENT_ID");
+const clientSecret = requiredEnvironment("AUTH_CLIENT_SECRET");
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -201,9 +210,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       id: "authservice",
       name: "Auth Service",
       type: "oidc",
-      issuer: process.env.AUTH_ISSUER,
-      clientId: process.env.AUTH_CLIENT_ID,
-      clientSecret: process.env.AUTH_CLIENT_SECRET,
+      issuer,
+      clientId,
+      clientSecret,
       authorization: {
         params: {
           scope: "openid profile email roles systems offline_access",
@@ -254,9 +263,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return isAuthPath || isSignInPage;
       }
       if (auth?.user && (isAuthPath || isSignInPage)) {
-        return Response.redirect(
-          new URL(process.env.AUTH_URL || "https://localhost:3001/"),
-        );
+        return Response.redirect(new URL(requiredEnvironment("AUTH_URL")));
       }
       if (!auth?.user && !isAuthPath && !isSignInPage) return false;
 
@@ -269,6 +276,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+function requiredEnvironment(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} must be configured.`);
+  return value;
+}
 ```
 
 ### Add refresh-token support
@@ -288,22 +301,48 @@ type RefreshTokenResponse = {
   refresh_token?: string;
 };
 
-export async function refreshAccessToken(token: JWT): Promise<JWT> {
-  if (!token.refreshToken)
-    return { ...token, error: "RefreshAccessTokenError" };
+type RefreshCacheEntry = { promise: Promise<JWT>; expiresAt: number };
 
+const refreshCache = new Map<string, RefreshCacheEntry>();
+const REFRESH_CACHE_TTL_MS = 30_000;
+
+export async function refreshAccessToken(token: JWT): Promise<JWT> {
+  const refreshToken = token.refreshToken;
+  if (!refreshToken) return { ...token, error: "RefreshAccessTokenError" };
+
+  const cached = refreshCache.get(refreshToken);
+  if (cached && Date.now() < cached.expiresAt) return cached.promise;
+
+  const promise = requestTokenRefresh(token, refreshToken);
+  refreshCache.set(refreshToken, {
+    promise,
+    expiresAt: Date.now() + REFRESH_CACHE_TTL_MS,
+  });
+
+  promise.finally(() => {
+    setTimeout(() => {
+      const entry = refreshCache.get(refreshToken);
+      if (entry?.promise === promise) refreshCache.delete(refreshToken);
+    }, REFRESH_CACHE_TTL_MS);
+  });
+
+  return promise;
+}
+
+async function requestTokenRefresh(
+  token: JWT,
+  refreshToken: string,
+): Promise<JWT> {
   try {
-    const issuer = (
-      process.env.AUTH_ISSUER || "https://localhost:5001/"
-    ).replace(/\/?$/, "/");
+    const issuer = requiredEnvironment("AUTH_ISSUER").replace(/\/?$/, "/");
     const response = await fetch(`${issuer}connect/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: process.env.AUTH_CLIENT_ID || "",
-        client_secret: process.env.AUTH_CLIENT_SECRET || "",
+        client_id: requiredEnvironment("AUTH_CLIENT_ID"),
+        client_secret: requiredEnvironment("AUTH_CLIENT_SECRET"),
         grant_type: "refresh_token",
-        refresh_token: token.refreshToken,
+        refresh_token: refreshToken,
       }),
       signal: AbortSignal.timeout(10_000),
     });
@@ -315,12 +354,18 @@ export async function refreshAccessToken(token: JWT): Promise<JWT> {
       ...token,
       accessToken: payload.access_token,
       expiresAt: Math.floor(Date.now() / 1000 + payload.expires_in),
-      refreshToken: payload.refresh_token ?? token.refreshToken,
+      refreshToken: payload.refresh_token ?? refreshToken,
       error: undefined,
     };
   } catch {
     return { ...token, error: "RefreshAccessTokenError" };
   }
+}
+
+function requiredEnvironment(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} must be configured.`);
+  return value;
 }
 
 function isRefreshTokenResponse(value: unknown): value is RefreshTokenResponse {
@@ -503,9 +548,9 @@ export async function GET(request: NextRequest) {
   const issuer = process.env.AUTH_ISSUER;
   if (!issuer) throw new Error("AUTH_ISSUER is required");
 
-  const postLogoutUrl = (
-    process.env.AUTH_URL || "https://localhost:3001/"
-  ).replace(/\/?$/, "/");
+  const appUrl = process.env.AUTH_URL;
+  if (!appUrl) throw new Error("AUTH_URL is required");
+  const postLogoutUrl = appUrl.replace(/\/?$/, "/");
   const logoutUrl = new URL("connect/logout", issuer);
   logoutUrl.searchParams.set("post_logout_redirect_uri", postLogoutUrl);
 
@@ -635,7 +680,7 @@ Place the listener inside the signed-in branch of `app/layout.tsx`, before your 
 ```tsx
 <LogoutEventListener
   accessToken={session.accessToken}
-  issuer={process.env.AUTH_ISSUER || "https://localhost:5001/"}
+  issuer={process.env.AUTH_ISSUER!}
 />
 ```
 

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>{{ page.title }} | Centralized Auth Docs</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1120;
+        --panel: #111827;
+        --panel-2: #172033;
+        --text: #e5e7eb;
+        --muted: #aab5c8;
+        --line: #28344a;
+        --brand: #67e8f9;
+        --code: #0a0f1a;
+        --link: #93c5fd;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.65 Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      .shell {
+        display: grid;
+        grid-template-columns: 18rem minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      aside {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        padding: 1.5rem 1rem;
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+      }
+      .brand {
+        display: block;
+        margin: 0 0.75rem 1.5rem;
+        color: var(--text);
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1.3;
+        text-decoration: none;
+      }
+      .brand span {
+        display: block;
+        margin-top: 0.3rem;
+        color: var(--brand);
+        font-size: 0.78rem;
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      nav a {
+        display: block;
+        padding: 0.42rem 0.75rem;
+        border-radius: 0.35rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-decoration: none;
+      }
+      nav a:hover,
+      nav a:focus {
+        background: var(--panel-2);
+        color: var(--brand);
+        outline: none;
+      }
+      nav .nav-title {
+        margin: 1.15rem 0.75rem 0.35rem;
+        color: #71809a;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      main {
+        width: min(100%, 70rem);
+        padding: 3rem clamp(1.25rem, 5vw, 4.5rem) 5rem;
+      }
+      h1,
+      h2,
+      h3 {
+        color: #f8fafc;
+        line-height: 1.2;
+        scroll-margin-top: 1rem;
+      }
+      h1 {
+        font-size: clamp(2rem, 4vw, 3rem);
+        margin: 0 0 1rem;
+      }
+      h2 {
+        margin-top: 3.5rem;
+        padding-top: 0.3rem;
+        font-size: 1.65rem;
+        border-top: 1px solid var(--line);
+      }
+      h3 {
+        margin-top: 2.2rem;
+        font-size: 1.2rem;
+      }
+      a {
+        color: var(--link);
+      }
+      p,
+      li {
+        max-width: 78ch;
+      }
+      code {
+        padding: 0.14rem 0.35rem;
+        border: 1px solid var(--line);
+        border-radius: 0.3rem;
+        background: var(--code);
+        color: #c4f1ff;
+        font-size: 0.88em;
+      }
+      pre {
+        overflow-x: auto;
+        padding: 1.1rem;
+        border: 1px solid var(--line);
+        border-radius: 0.55rem;
+        background: var(--code);
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.16);
+      }
+      pre code {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #dbeafe;
+        font-size: 0.84rem;
+      }
+      blockquote {
+        margin: 1.5rem 0;
+        padding: 0.75rem 1rem;
+        border-left: 0.25rem solid var(--brand);
+        background: var(--panel);
+        color: #d5e2f1;
+      }
+      table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 0.7rem;
+        border: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--panel-2);
+        color: #f8fafc;
+      }
+      tr:nth-child(even) {
+        background: rgb(23 32 51 / 0.45);
+      }
+      .mermaid {
+        margin: 1.5rem 0;
+        padding: 1rem;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 0.55rem;
+        background: var(--panel);
+      }
+      @media (max-width: 900px) {
+        .shell {
+          display: block;
+        }
+        aside {
+          position: static;
+          height: auto;
+          padding: 1rem;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        nav {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.2rem;
+        }
+        nav a {
+          font-size: 0.78rem;
+        }
+        nav .nav-title {
+          width: 100%;
+          margin: 0.7rem 0.5rem 0.1rem;
+        }
+        .brand {
+          margin: 0 0.5rem 0.75rem;
+        }
+        main {
+          padding-top: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside aria-label="Documentation navigation">
+        <a class="brand" href="{{ '/' | relative_url }}"
+          >Centralized Auth <span>Integration guide</span></a
+        >
+        <nav>
+          <a href="#what-you-will-build">Overview</a>
+          <a href="#before-you-start">Before you start</a>
+          <a href="#the-fixed-application-map">App and client map</a>
+          <p class="nav-title">Integration steps</p>
+          <a href="#1-give-the-auth-service-owner-the-deployed-url"
+            >1. Submit deployed URL</a
+          >
+          <a href="#2-add-environment-variables-to-the-client-app"
+            >2. Environment variables</a
+          >
+          <a href="#3-install-the-client-dependency">3. Install dependency</a>
+          <a href="#4-add-the-authjs-configuration">4. Auth.js configuration</a>
+          <a href="#5-add-the-authjs-route-and-typescript-types"
+            >5. Auth route and types</a
+          >
+          <a href="#6-protect-every-page-with-middleware">6. Middleware</a>
+          <a href="#7-send-signed-out-visitors-to-the-auth-service"
+            >7. Sign-in redirect</a
+          >
+          <a href="#8-block-users-who-do-not-have-this-applications-permission"
+            >8. System permission gate</a
+          >
+          <a href="#9-implement-complete-logout">9. Complete logout</a>
+          <a href="#10-receive-logout-events-from-other-applications"
+            >10. Cross-app logout</a
+          >
+          <a href="#11-trust-the-local-mkcert-certificate"
+            >11. Local certificate</a
+          >
+          <a href="#12-start-and-verify-locally">12. Verify locally</a>
+          <p class="nav-title">Release</p>
+          <a href="#production-handoff-checklist">Production checklist</a>
+          <a href="#common-problems">Troubleshooting</a>
+          <a href="#security-rules-worth-remembering">Security rules</a>
+        </nav>
+      </aside>
+      <main>{{ content }}</main>
+    </div>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "dark",
+        securityLevel: "strict",
+        flowchart: { useMaxWidth: true },
+      });
+    </script>
+  </body>
+</html>
