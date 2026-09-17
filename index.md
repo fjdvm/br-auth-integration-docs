@@ -712,6 +712,198 @@ Open `https://localhost:3001` and check each result:
 
 If the callback fails with an `invalid_redirect_uri` error, compare the entire callback address with the Auth Service registration. Check scheme (`https`), domain, port, path, and trailing slash on the post-logout root.
 
+## 13. If your application has a .NET backend API
+
+If the application is only a Next.js web app, skip this section. If HRMS, POS, SCMS, OOS, or Portal has its own ASP.NET Core API, **yes, the API must validate the access token and enforce access rules too**. A frontend check alone does not protect API endpoints.
+
+The .NET API does not need `AUTH_SECRET` or `AUTH_CLIENT_SECRET`. It receives the user's bearer access token from the web app and validates it against the Auth Service.
+
+### A. Add the required package
+
+From the application's .NET API directory, add this only if it is not already installed and after following your team's dependency approval process:
+
+```zsh
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer --version 10.0.10
+```
+
+### B. Add backend environment variables
+
+Follow the existing `trellis/services/api-crms/.env.example` naming pattern. In the application's API `.env` file locally—or in the API hosting provider's environment-variable screen in production—set:
+
+```dotenv
+# Local: https://localhost:5001
+# Production: the public HTTPS URL of the Auth Service.
+JWT_AUTHORITY=https://auth.example.com/
+
+# Kept for future audience-scoped tokens. The current Auth Service does not
+# issue resource audiences, so validation remains disabled in Program.cs.
+JWT_AUDIENCE=hrms-client
+
+# The allowed browser origin for this application's API CORS policy.
+WEB_HRMS_URL=https://hrms.example.com
+```
+
+For POS use `JWT_AUDIENCE=pos-client` and `WEB_POS_URL`; for SCMS use `scms-client` and `WEB_SCMS_URL`; for OOS use `oos-client` and `WEB_OOS_URL`. The API does **not** need `AUTH_SECRET` or `AUTH_CLIENT_SECRET`.
+
+### C. Create a module-permission authorization handler
+
+Create this file in the application's API project:
+
+```text
+Authorization/AppPermissionAuthorizationHandler.cs
+```
+
+```csharp
+using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
+
+namespace YourApp.Authorization;
+
+public sealed class AppPermissionRequirement(
+    string systemCode,
+    string moduleName,
+    string action) : IAuthorizationRequirement
+{
+    public string SystemCode { get; } = systemCode;
+    public string ModuleName { get; } = moduleName;
+    public string Action { get; } = action;
+}
+
+public sealed class AppPermissionAuthorizationHandler
+    : AuthorizationHandler<AppPermissionRequirement>
+{
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        AppPermissionRequirement requirement)
+    {
+        if (IsSuperUser(context.User) || HasPermission(context.User, requirement))
+        {
+            context.Succeed(requirement);
+        }
+        return Task.CompletedTask;
+    }
+
+    private static bool IsSuperUser(ClaimsPrincipal user) =>
+        bool.TryParse(user.FindFirst("isSuperUser")?.Value, out var value) && value;
+
+    private static bool HasPermission(ClaimsPrincipal user, AppPermissionRequirement requirement)
+    {
+        var permissions = user.FindFirst("permissions")?.Value;
+        if (string.IsNullOrWhiteSpace(permissions)) return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(permissions);
+            return document.RootElement.TryGetProperty(requirement.SystemCode, out var app)
+                && app.TryGetProperty(requirement.ModuleName, out var module)
+                && module.TryGetProperty(requirement.Action, out var allowed)
+                && allowed.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+}
+```
+
+This matches the working `api-crms` pattern. The module name must match the Auth Service module name exactly—for example, `Employee Information` in HRMS—and an action is one of `canRead`, `canWrite`, `canUpdate`, `canDelete`, `canApprove`, or `canExport`.
+
+### D. Configure token validation in `Program.cs`
+
+In the application's API `Program.cs`, add these imports at the top:
+
+```csharp
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using YourApp.Authorization;
+```
+
+Before `var app = builder.Build();`, add this configuration. It follows `api-crms`: replace the CORS variable and policy module names with the modules used by your own application.
+
+```csharp
+var webHrmsUrl = Environment.GetEnvironmentVariable("WEB_HRMS_URL")
+    ?? "https://localhost:3001";
+var jwtAuthority = Environment.GetEnvironmentVariable("JWT_AUTHORITY")
+    ?? "https://localhost:5001";
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? "hrms-client";
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(webHrmsUrl)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();
+    });
+});
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = jwtAuthority;
+        options.Audience = jwtAudience;
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        // The current Auth Service does not issue resource audiences.
+        // Retain JWT_AUDIENCE for the future, but do not enable this yet.
+        options.TokenValidationParameters.ValidateAudience = false;
+    });
+
+builder.Services.AddSingleton<IAuthorizationHandler, AppPermissionAuthorizationHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("EmployeeInformationCanRead", policy =>
+    {
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new AppPermissionRequirement(
+            "HRMS", "Employee Information", "canRead"));
+    });
+});
+```
+
+After `var app = builder.Build();`, ensure middleware is in this order:
+
+```csharp
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+If the API receives browser requests directly, also put CORS before authentication and authorization:
+
+```csharp
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+### E. Protect every API controller or endpoint
+
+Add the policy to each controller that belongs to the application:
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize(Policy = "EmployeeInformationCanRead")]
+public sealed class EmployeesController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult Get()
+    {
+        return Ok();
+    }
+}
+```
+
+The API should return `401` when a request has no valid token and `403` when the token is valid but lacks the required permission. Create separate policies for write, approval, export, update, and delete actions; do not rely on the frontend to protect them.
+
 ## Google Form: integration request template
 
 <p class="form-callout"><strong>Ready to submit?</strong> <a class="form-button" href="https://forms.gle/Z7VwH5k4ZPhTFQoC9" target="_blank" rel="noopener noreferrer">Submit an integration request in Google Forms ↗</a></p>
