@@ -415,30 +415,25 @@ This lets Auth.js handle protected requests while excluding static Next.js files
 
 ## 7. Send signed-out visitors to the Auth Service
 
-Create the sign-in page as a **Server Component** that redirects immediately, before any HTML is sent to the browser:
+Create the sign-in route as a **Route Handler**, not a page, so it redirects immediately, before any HTML is sent to the browser:
 
 ```text
-apps/web/hrms/app/signin/page.tsx
+apps/web/hrms/app/signin/route.ts
 ```
 
-```tsx
+```ts
+import { NextRequest } from "next/server";
 import { signIn } from "@/auth";
 
-export const dynamic = "force-dynamic";
-
-export default async function SignInPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ callbackUrl?: string }>;
-}) {
-  const { callbackUrl } = await searchParams;
-  await signIn("authservice", { redirectTo: callbackUrl ?? "/" });
+export async function GET(request: NextRequest) {
+  const callbackUrl = request.nextUrl.searchParams.get("callbackUrl") ?? "/";
+  await signIn("authservice", { redirectTo: callbackUrl });
 }
 ```
 
-`middleware.ts` (Step 6) already sends unauthenticated visitors here with `?callbackUrl=<original path>` before this page renders. `signIn()` runs on the server during the page's own render and throws a redirect straight to the Auth Service.
+`middleware.ts` (Step 6) already sends unauthenticated visitors here with `?callbackUrl=<original path>`. `signIn()` needs to set PKCE/state cookies before redirecting to the Auth Service, and Next.js only allows `cookies()` to be mutated inside a Server Action or Route Handler — **not** inside a plain `page.tsx` Server Component render. Implementing this as a page instead of a route will build and pass `next start` locally (a local Auth Service that isn't running makes `signIn()` fail *before* it reaches the cookie-setting step, hiding the bug), then 500 in production the moment it hits a real, reachable Auth Service. If you test this locally, do it against the real Auth Service issuer, not a stub, so this failure mode actually surfaces.
 
-Do **not** implement this with a `"use client"` component that calls `signIn()` inside a `useEffect`. That pattern loads a blank page, hydrates it, runs the effect, and only then redirects — a full extra render+hydrate cycle in front of the OIDC redirect. It is the single biggest source of visible delay when switching between apps, and it is unnecessary: the server-side redirect above skips straight to the Auth Service with no client JavaScript involved.
+Do **not** implement this with a `"use client"` component that calls `signIn()` inside a `useEffect` either. That pattern loads a blank page, hydrates it, runs the effect, and only then redirects — a full extra render+hydrate cycle in front of the OIDC redirect, and the single biggest source of visible delay when switching between apps.
 
 ## 8. Block users who do not have this application's permission
 
@@ -451,6 +446,7 @@ apps/web/hrms/app/layout.tsx
 Keep your existing fonts, providers, and visual shell. Add the `auth` import, then use this authorization decision around your current application UI:
 
 ```tsx
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 
 const THIS_SYSTEM_CODE = "HRMS"; // POS, SCMS, or OOS in the matching app
@@ -460,13 +456,11 @@ export default async function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
 
-  if (!session) {
-    return (
-      <html lang="en">
-        <body>{children}</body>
-      </html>
-    );
-  }
+  // /signin is a Route Handler (Step 7), so it never reaches this layout.
+  // This only fires on the rare race where middleware saw a valid session
+  // that had since expired by the time this layout's own auth() call ran -
+  // send it back through /signin rather than rendering children unguarded.
+  if (!session) redirect("/signin");
 
   if (!session.systems.includes(THIS_SYSTEM_CODE)) {
     return (
