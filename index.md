@@ -415,26 +415,30 @@ This lets Auth.js handle protected requests while excluding static Next.js files
 
 ## 7. Send signed-out visitors to the Auth Service
 
-Create:
+Create the sign-in page as a **Server Component** that redirects immediately, before any HTML is sent to the browser:
 
 ```text
-apps/web/hrms/components/auth/RedirectToLogin.tsx
+apps/web/hrms/app/signin/page.tsx
 ```
 
 ```tsx
-"use client";
+import { signIn } from "@/auth";
 
-import { useEffect } from "react";
-import { signIn } from "next-auth/react";
+export const dynamic = "force-dynamic";
 
-export function RedirectToLogin() {
-  useEffect(() => {
-    signIn("authservice", { callbackUrl: "/" });
-  }, []);
-
-  return <p className="p-6">Taking you to the secure sign-in page…</p>;
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl } = await searchParams;
+  await signIn("authservice", { redirectTo: callbackUrl ?? "/" });
 }
 ```
+
+`middleware.ts` (Step 6) already sends unauthenticated visitors here with `?callbackUrl=<original path>` before this page renders. `signIn()` runs on the server during the page's own render and throws a redirect straight to the Auth Service.
+
+Do **not** implement this with a `"use client"` component that calls `signIn()` inside a `useEffect`. That pattern loads a blank page, hydrates it, runs the effect, and only then redirects — a full extra render+hydrate cycle in front of the OIDC redirect. It is the single biggest source of visible delay when switching between apps, and it is unnecessary: the server-side redirect above skips straight to the Auth Service with no client JavaScript involved.
 
 ## 8. Block users who do not have this application's permission
 
@@ -444,11 +448,10 @@ Edit the root layout at:
 apps/web/hrms/app/layout.tsx
 ```
 
-Keep your existing fonts, providers, and visual shell. Add the `auth` and `RedirectToLogin` imports, then use this authorization decision around your current application UI:
+Keep your existing fonts, providers, and visual shell. Add the `auth` import, then use this authorization decision around your current application UI:
 
 ```tsx
 import { auth } from "@/auth";
-import { RedirectToLogin } from "@/components/auth/RedirectToLogin";
 
 const THIS_SYSTEM_CODE = "HRMS"; // POS, SCMS, or OOS in the matching app
 
@@ -460,9 +463,7 @@ export default async function RootLayout({
   if (!session) {
     return (
       <html lang="en">
-        <body>
-          <RedirectToLogin />
-        </body>
+        <body>{children}</body>
       </html>
     );
   }
